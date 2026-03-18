@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FPI Intel 2.0 — Sales Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0c10;
+  --surface: #111520;
+  --surface2: #181d2b;
+  --surface3: #1f2538;
+  --border: #252d42;
+  --border2: #313d58;
+  --accent: #4d9fff;
+  --accent2: #7dc3ff;
+  --accent3: #c8f03c;
+  --text: #dde5f4;
+  --muted: #5a6a8a;
+  --muted2: #8295b8;
+  --danger: #ff5f3d;
+
+  /* tier colors */
+  --tier-guard: #4d9fff;
+  --tier-rosa: #c8f03c;
+  --tier-rio: #ffdf4d;
+  --tier-ava: #b94dff;
+  --tier-hybrid: #ff9f4d;
+  --tier-svc: #4dffd6;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Sans', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(77,159,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(77,159,255,0.03) 1px, transparent 1px);
+  background-size: 44px 44px;
+  pointer-events: none; z-index: 0;
+}
+
+.app { position: relative; z-index: 1; max-width: 1020px; margin: 0 auto; padding: 32px 22px 100px; }
+
+/* HEADER */
+.header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid var(--border);
+  flex-wrap: wrap; gap: 16px;
+  background: linear-gradient(135deg, rgba(77,159,255,0.07) 0%, transparent 60%);
+  margin-left: -22px; margin-right: -22px; padding-left: 22px; padding-right: 22px;
+  padding-top: 28px; margin-top: -32px; border-radius: 0 0 2px 2px;
+}
+.header-logo-block { display: flex; flex-direction: column; gap: 6px; }
+.header-logo { width: 180px; height: auto; display: block; filter: brightness(1.05); }
+.header-subtitle {
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 3px;
+  color: var(--muted); text-transform: uppercase; margin-top: 2px;
+}
+.status-dot { display: flex; align-items: center; gap: 7px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--muted); }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent2); animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.35;transform:scale(.75)} }
+
+.header-meta { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--muted); line-height: 1.85; text-align: right; }
+
+/* MODE SWITCHER */
+.mode-switcher {
+  display: flex; margin-bottom: 28px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 4px; gap: 4px;
+}
+.mode-btn {
+  flex: 1; padding: 12px 20px; border: none; border-radius: 3px; cursor: pointer;
+  font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 1.5px;
+  transition: all 0.2s; color: var(--muted); background: transparent;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+.mode-btn .mode-icon { font-size: 14px; }
+.mode-btn.active { background: var(--accent); color: #fff; }
+.mode-btn:not(.active):hover { color: var(--text); background: var(--surface2); }
+
+/* TIER LEGEND */
+.tier-legend {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px;
+}
+.tier-pill {
+  display: flex; align-items: center; gap: 6px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 1px;
+  padding: 5px 11px; border-radius: 20px; border: 1px solid; text-transform: uppercase;
+}
+.tier-pill.guard  { border-color: var(--tier-guard);  color: var(--tier-guard);  background: rgba(77,159,255,.07); }
+.tier-pill.rosa   { border-color: var(--tier-rosa);   color: var(--tier-rosa);   background: rgba(200,240,60,.07); }
+.tier-pill.rio    { border-color: var(--tier-rio);    color: var(--tier-rio);    background: rgba(255,223,77,.07); }
+.tier-pill.ava    { border-color: var(--tier-ava);    color: var(--tier-ava);    background: rgba(185,77,255,.07); }
+.tier-pill.hybrid { border-color: var(--tier-hybrid); color: var(--tier-hybrid); background: rgba(255,159,77,.07); }
+.tier-pill.svc    { border-color: var(--tier-svc);    color: var(--tier-svc);    background: rgba(77,255,214,.07); }
+
+/* SECTION LABEL */
+.section-label {
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 14px; display: flex; align-items: center; gap: 10px;
+}
+.section-label::after { content:''; flex:1; height:1px; background:var(--border); max-width: 200px; }
+/* PANELS */
+.panel {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+  padding: 26px; margin-bottom: 20px; position: relative;
+}
+.panel::before {
+  content:''; position:absolute; top:0; left:0; width:3px; height:100%;
+  border-radius:4px 0 0 4px;
+}
+.panel.accent-guard::before  { background: var(--tier-guard); }
+.panel.accent-rosa::before   { background: var(--tier-rosa); }
+.panel.accent-rio::before    { background: var(--tier-rio); }
+.panel.accent-ava::before    { background: var(--tier-ava); }
+.panel.accent-hybrid::before { background: var(--tier-hybrid); }
+.panel.accent-svc::before    { background: var(--tier-svc); }
+.panel.accent-default::before{ background: var(--accent); }
+
+/* FORM ELEMENTS */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.field-group { display: flex; flex-direction: column; gap: 7px; }
+.field-group.full { grid-column: 1/-1; }
+label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+input, select, textarea {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 3px;
+  color: var(--text); font-family: 'IBM Plex Sans', sans-serif; font-size: 14px;
+  padding: 10px 13px; transition: border-color .2s; outline: none; -webkit-appearance: none;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23647068' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 13px center; padding-right: 34px; cursor: pointer;
+}
+select option { background: #131615; }
+textarea { resize: vertical; min-height: 72px; }
+
+/* CHIP CHECKBOXES */
+.chip-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.chip-check {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 3px;
+  padding: 7px 12px; cursor: pointer; font-size: 12px; color: var(--muted); user-select: none; transition: all .15s;
+}
+.chip-check input[type="checkbox"] { width:12px; height:12px; padding:0; background:transparent; border:1px solid var(--border); accent-color: var(--accent); cursor:pointer; }
+.chip-check:has(input:checked) { border-color: var(--accent); color: var(--accent); background: rgba(77,159,255,.08); }
+
+/* RADIO CHIPS for tier selection */
+.tier-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.tier-chip {
+  padding: 7px 14px; border-radius: 3px; border: 1px solid var(--border);
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+  cursor: pointer; user-select: none; transition: all .15s; color: var(--muted); background: var(--surface2);
+}
+.tier-chip:hover { border-color: var(--border2); color: var(--text); }
+.tier-chip.sel-guard  { border-color: var(--tier-guard);  color: var(--tier-guard);  background: rgba(77,159,255,.1); }
+.tier-chip.sel-rosa   { border-color: var(--tier-rosa);   color: var(--tier-rosa);   background: rgba(200,240,60,.1); }
+.tier-chip.sel-rio    { border-color: var(--tier-rio);    color: var(--tier-rio);    background: rgba(255,223,77,.1); }
+.tier-chip.sel-ava    { border-color: var(--tier-ava);    color: var(--tier-ava);    background: rgba(185,77,255,.1); }
+.tier-chip.sel-hybrid { border-color: var(--tier-hybrid); color: var(--tier-hybrid); background: rgba(255,159,77,.1); }
+.tier-chip.sel-svc    { border-color: var(--tier-svc);    color: var(--tier-svc);    background: rgba(77,255,214,.1); }
+.tier-chip.sel-all    { border-color: var(--accent2); color: var(--accent2); background: rgba(77,255,145,.1); }
+
+/* BUTTONS */
+.run-btn {
+  margin-top: 22px; width: 100%; background: var(--accent); color: #fff;
+  border: none; border-radius: 3px; padding: 13px 24px;
+  font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 2px;
+  cursor: pointer; transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+.run-btn:hover:not(:disabled) { background: #6db3ff; transform: translateY(-1px); }
+.run-btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+/* LOADING */
+.loading-bar { width:100%; height:2px; background:var(--border); margin-top:14px; border-radius:2px; overflow:hidden; display:none; }
+.loading-bar.active { display:block; }
+.loading-bar-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2),var(--accent)); background-size:200% 100%; animation:loading 1.3s linear infinite; width:55%; }@keyframes loading { 0%{background-position:200% 0;transform:translateX(-100%)} 100%{background-position:-200% 0;transform:translateX(260%)} }
+
+/* ERROR */
+.error-msg { background:rgba(255,95,61,.07); border:1px solid rgba(255,95,61,.3); border-radius:4px; padding:14px 18px; color:var(--danger); font-family:'IBM Plex Mono',monospace; font-size:12px; display:none; margin-top:14px; }
+.error-msg.visible { display:block; }
+
+/* RESULTS */
+.results-panel { display:none; animation: fadeIn .4s ease; }
+.results-panel.visible { display:block; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(7px)} to{opacity:1;transform:translateY(0)} }
+
+/* DISCOVER RESULTS - target cards */
+.target-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+.target-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+  overflow: hidden; transition: border-color .2s; cursor: default;
+}
+.target-card:hover { border-color: var(--border2); }
+.tc-header {
+  padding: 14px 18px 10px; border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+.tc-name { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: .5px; margin-bottom: 6px; }
+.tc-badges { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+.tc-tier {
+  font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase;
+  padding: 3px 9px; border-radius: 20px; border: 1px solid; font-weight: 500;
+}
+.tc-tier.guard  { border-color:var(--tier-guard);  color:var(--tier-guard);  background:rgba(77,159,255,.1); }
+.tc-tier.rosa   { border-color:var(--tier-rosa);   color:var(--tier-rosa);   background:rgba(200,240,60,.1); }
+.tc-tier.rio    { border-color:var(--tier-rio);    color:var(--tier-rio);    background:rgba(255,223,77,.1); }
+.tc-tier.ava    { border-color:var(--tier-ava);    color:var(--tier-ava);    background:rgba(185,77,255,.1); }
+.tc-tier.hybrid { border-color:var(--tier-hybrid); color:var(--tier-hybrid); background:rgba(255,159,77,.1); }
+.tc-tier.svc    { border-color:var(--tier-svc);    color:var(--tier-svc);    background:rgba(77,255,214,.1); }
+.tc-value {
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--muted2);
+  margin-left: auto; white-space: nowrap;
+}
+.tc-body { padding: 14px 18px; font-size: 13px; line-height: 1.7; color: #b8c9ba; }
+.tc-section { margin-bottom: 10px; }
+.tc-section:last-child { margin-bottom: 0; }
+.tc-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.tc-drill-btn {
+  margin-top: 14px; width: 100%; padding: 8px; border: 1px solid var(--border);
+  background: transparent; color: var(--muted); font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; letter-spacing: 1px; text-transform: uppercase; border-radius: 3px;
+  cursor: pointer; transition: all .15s;
+}
+.tc-drill-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* BRIEF RESULTS */
+.brief-header {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+  padding: 18px 24px; margin-bottom: 14px;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+}
+.brief-name { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 1px; }
+.brief-tags { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.tag { font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1px; text-transform:uppercase; padding:4px 10px; border-radius:2px; background:var(--surface2); border:1px solid var(--border); color:var(--muted); }
+.tag.accent { border-color:var(--accent); color:var(--accent); background:rgba(77,159,255,.1); }
+
+.result-card { background:var(--surface); border:1px solid var(--border); border-radius:4px; margin-bottom:12px; overflow:hidden; transition:border-color .2s; }
+.result-card:hover { border-color: var(--border2); }
+.card-header { padding:13px 20px; background:var(--surface2); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; }
+.card-icon { width:26px; height:26px; background:rgba(77,159,255,.12); border:1px solid var(--accent); border-radius:3px; display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
+.card-title { font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--accent); font-weight:500; }
+.card-body { padding:18px 20px; font-size:13.5px; line-height:1.78; color:#bfcfc1; white-space:pre-wrap; }
+.copy-btn { margin-left:auto; background:transparent; border:1px solid var(--border); border-radius:3px; color:var(--muted); font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1px; padding:5px 10px; cursor:pointer; transition:all .15s; text-transform:uppercase; }
+.copy-btn:hover { border-color:var(--accent); color:var(--accent); }
+.copy-btn.copied { border-color:var(--accent2); color:var(--accent2); }
+
+/* RECOMMENDED TIER BANNER */
+.tier-banner {
+  border-radius: 4px; padding: 14px 18px; margin-bottom: 14px;
+  border: 1px solid; display: flex; align-items: center; gap: 14px;
+}
+.tier-banner.guard  { border-color:var(--tier-guard);  background:rgba(77,159,255,.07); }
+.tier-banner.rosa   { border-color:var(--tier-rosa);   background:rgba(200,240,60,.07); }
+.tier-banner.rio    { border-color:var(--tier-rio);    background:rgba(255,223,77,.07); }
+.tier-banner.ava    { border-color:var(--tier-ava);    background:rgba(185,77,255,.07); }
+.tier-banner.hybrid { border-color:var(--tier-hybrid); background:rgba(255,159,77,.07); }
+.tier-banner.svc    { border-color:var(--tier-svc);    background:rgba(77,255,214,.07); }
+.tier-banner-label { font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:3px; }
+.tier-banner-name { font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:1px; }
+.tier-banner.guard .tier-banner-name  { color:var(--tier-guard); }
+.tier-banner.rosa .tier-banner-name   { color:var(--tier-rosa); }
+.tier-banner.rio .tier-banner-name    { color:var(--tier-rio); }
+.tier-banner.ava .tier-banner-name    { color:var(--tier-ava); }
+.tier-banner.hybrid .tier-banner-name { color:var(--tier-hybrid); }
+.tier-banner.svc .tier-banner-name    { color:var(--tier-svc); }
+.tier-banner-reason { font-size:13px; color:var(--muted2); line-height:1.6; }
+
+/* SAVED LEADS */
+.saved-section { margin-top: 40px; }
+.saved-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.saved-chip {
+  background:var(--surface); border:1px solid var(--border); border-radius:3px;
+  padding:8px 13px; font-size:12px; display:flex; align-items:center; gap:10px;
+  cursor:pointer; transition:border-color .15s;
+}
+.saved-chip:hover { border-color: var(--accent); }
+.saved-chip-name { font-weight:500; }
+.saved-chip-sub { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--muted); }
+.saved-chip-del { color:var(--muted); font-size:14px; background:none; border:none; cursor:pointer; transition:color .15s; padding:0 2px; }
+.saved-chip-del:hover { color:var(--danger); }
+.empty-state { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); padding:12px 0; }
+
+/* DIVIDER */
+.divider { height:1px; background:var(--border); margin: 20px 0; }
+
+/* SAVE BTN */
+.save-btn {
+  margin-top: 10px; background:transparent; border:1px solid var(--border); color:var(--muted);
+  font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:1px; padding:8px 18px;
+  border-radius:3px; cursor:pointer; transition:all .15s; text-transform:uppercase;
+}
+.save-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+@media(max-width:640px) {
+  .form-grid { grid-template-columns:1fr; }
+  .field-group.full { grid-column:1; }
+  .header { flex-direction:column; gap:10px; }
+  .header-meta { text-align:left; }
+  .header-logo { width: 140px; }
+  .target-grid { grid-template-columns:1fr; }
+  .mode-btn { font-size:15px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-logo-block">
+      <img src="data:image/jpeg;base64,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eS8chjmHNI7C3vVA3Uzn0xrIqMOpX3SOggkMn1UF4jdIOXUHcQHp4c9q+dZ2i6Vb6avsM0cFxY19M97zgdBJyce9zSGvb3jHava6WThs1qttsia2Giq6V4a52MRxvaSe84H3Sm493n7XXi5T3ae12OggqJKUN8ZnqZjHFG5wy1gw0lzsYJ5YAI58181V8udDp253G5WcQVFDG54Y2oD4pwBnLXYyB2c2gjvXnUU15tF7ra62UUdypK9zZJYOmEUsUoaGFzS7yXNLWt5Eggjtyvi7U9/vWlLzS1dDSUs1TA6Olp2z8bhluPpj8cOSfQMD0lNwyysoqrUstRGJ7daGwFw6R0Ve97mt7SB0YBP3QqL1fu1bXVsdoobc+GindTv8arTHJK9vncLWtdwj0F3X14wvmwsrrbIIKLRdLboJpG9M6GrjHdxEAc8BU10t1XPXTuuGiLPeJHOIjq2PjZxM/ih4eOIEDA5F3d6EPMvBLaKSaakilqKc00zmAviLw4sPaMjkfdC9latJW+ptWn6Wgq5GyTRB2eFznNYC4kMBdzIaCGgnsCuqiTXAIiIehERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQH//Z" alt="FPI Security Services" class="header-logo" />
+      <div class="header-subtitle">Sales Intelligence System</div>
+      <div class="status-dot"><span class="dot"></span> AI ENGINE ACTIVE</div>
+    </div>
+    <div class="header-meta">
+      FPI Security Services<br>
+      Founded 1981 · Pembroke Pines, FL<br>
+      450+ Officers · FL + DFW Markets
+    </div>
+  </div>
+
+  <!-- TIER LEGEND -->
+  <div class="tier-legend">
+    <div class="tier-pill guard">● Guard / Patrol</div>
+    <div class="tier-pill rosa">● ROSA AI Unit</div>
+    <div class="tier-pill rio">● RIO Solar Trailer</div>
+    <div class="tier-pill ava">● AVA Gate Attendant</div>
+    <div class="tier-pill hybrid">● Hybrid Model</div>
+    <div class="tier-pill svc">● Service &amp; Maintenance</div>
+  </div>
+
+  <!-- MODE SWITCHER -->
+  <div class="mode-switcher">
+    <button class="mode-btn active" id="discoverBtn" onclick="switchMode('discover')">
+      <span class="mode-icon">🔍</span> Discover Targets
+    </button>
+    <button class="mode-btn" id="briefBtn" onclick="switchMode('brief')">
+      <span class="mode-icon">📋</span> Brief a Prospect
+    </button>
+  </div>
+
+  <!-- ═══════════════════════════════ DISCOVER MODE ═══════════════════════════════ -->
+  <div id="discoverMode">
+    <div class="section-label">Target Discovery</div>
+    <div class="panel accent-default">
+      <div class="form-grid">
+
+        <div class="field-group">
+          <label>Market / Territory</label>
+          <select id="d_market">
+            <option value="South Florida (Miami-Dade, Broward, Orlando)">South Florida</option>
+            <option value="Dallas-Fort Worth, Texas">DFW / Texas</option>
+            <option value="both South Florida and Dallas-Fort Worth">Both Markets</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label>Priority Vertical (optional)</label>
+          <select id="d_vertical">
+            <option value="">Any / All Verticals</option>
+            <option value="HOA and residential gated communities">HOA / Residential Communities</option>
+            <option value="commercial office parks and business districts">Commercial Properties</option>
+            <option value="K-12 schools and private schools">Schools / Education</option>
+            <option value="healthcare facilities and medical campuses">Healthcare</option>
+            <option value="government buildings and municipalities">Government / Municipal</option>
+            <option value="auto dealerships and vehicle storage lots">Auto Dealerships</option>
+            <option value="storage facilities and warehouses">Storage / Logistics</option>
+            <option value="marinas and waterfront properties">Marinas / Waterfront</option>
+            <option value="retail and shopping centers">Retail</option>
+            <option value="construction and development sites">Construction Sites</option>
+          </select>
+        </div>
+
+        <div class="field-group full">
+          <label>Service Tier Focus</label>
+          <div class="tier-chips" id="tierChips">
+            <div class="tier-chip" data-tier="all" onclick="selectTier(this,'all')">All Tiers</div>
+            <div class="tier-chip" data-tier="guard" onclick="selectTier(this,'guard')">Guard / Patrol</div>
+            <div class="tier-chip" data-tier="rosa" onclick="selectTier(this,'rosa')">ROSA AI Units</div>
+            <div class="tier-chip" data-tier="rio" onclick="selectTier(this,'rio')">RIO Solar Trailers</div>
+            <div class="tier-chip" data-tier="ava" onclick="selectTier(this,'ava')">AVA Gate Attendant</div>
+            <div class="tier-chip" data-tier="hybrid" onclick="selectTier(this,'hybrid')">Hybrid Models</div>
+            <div class="tier-chip" data-tier="svc" onclick="selectTier(this,'svc')">Service &amp; Maintenance</div>
+          </div>
+        </div>
+
+        <div class="field-group full">
+          <label>Generate</label>
+          <div class="chip-group">
+            <label class="chip-check"><input type="checkbox" id="d_why" checked /> Why target them now</label>
+            <label class="chip-check"><input type="checkbox" id="d_solution" checked /> Recommended FPI solution</label>
+            <label class="chip-check"><input type="checkbox" id="d_hook" checked /> Opening hook</label>
+            <label class="chip-check"><input type="checkbox" id="d_where" checked /> Where to find them</label>
+          </div>
+        </div>
+
+      </div>
+      <button class="run-btn" id="discoverRunBtn" onclick="runDiscover()">🔍 Generate Target List</button>
+      <div class="loading-bar" id="discoverLoadingBar"><div class="loading-bar-fill"></div></div>
+      <div class="error-msg" id="discoverError"></div>
+    </div>
+
+    <!-- Discover Results -->
+    <div class="results-panel" id="discoverResults">
+      <div class="section-label">Target Opportunities</div>
+      <div class="target-grid" id="targetGrid"></div>
+      <button class="save-btn" onclick="saveDiscover()">+ Save This Target List</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════ BRIEF MODE ═══════════════════════════════ -->
+  <div id="briefMode" style="display:none;">
+    <div class="section-label">Prospect Intake</div>
+    <div class="panel accent-default">
+      <div class="form-grid">
+
+        <div class="field-group">
+          <label>Company / Property Name</label>
+          <input type="text" id="b_company" placeholder="e.g. Miramar Town Square HOA" />
+        </div>
+
+        <div class="field-group">
+          <label>Industry Vertical</label>
+          <select id="b_vertical">
+            <option value="">— Select Vertical —</option>
+            <option value="HOA / Residential Community">HOA / Residential Community</option>
+            <option value="Commercial Property / Office Park">Commercial Property / Office Park</option>
+            <option value="K-12 School / Private School">K-12 School / Private School</option>
+            <option value="Healthcare / Medical Facility">Healthcare / Medical Facility</option>
+            <option value="Government / Municipality">Government / Municipality</option>
+            <option value="Auto Dealership / Vehicle Lot">Auto Dealership / Vehicle Lot</option>
+            <option value="Storage Facility / Warehouse">Storage Facility / Warehouse</option>
+            <option value="Marina / Waterfront">Marina / Waterfront</option>
+            <option value="Retail / Shopping Center">Retail / Shopping Center</option>
+            <option value="Construction / Development Site">Construction / Development Site</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label>Location / City</label>
+          <input type="text" id="b_location" placeholder="e.g. Coral Springs, FL" />
+        </div>
+
+        <div class="field-group">
+          <label>Contact Name (optional)</label>
+          <input type="text" id="b_contact" placeholder="e.g. Maria Torres, Property Manager" />
+        </div>
+
+        <div class="field-group full">
+          <label>Known Context / Pain Points (optional)</label>
+          <textarea id="b_context" placeholder="e.g. Currently using Securitas, had a break-in last month, 200-unit gated community, running 24hr gatehouse now..."></textarea>
+        </div>
+
+        <div class="field-group full">
+          <label>Generate</label>
+          <div class="chip-group">
+            <label class="chip-check"><input type="checkbox" id="b_why" checked /> Why Target</label>
+            <label class="chip-check"><input type="checkbox" id="b_tier" checked /> Recommended Solution Tier</label>
+            <label class="chip-check"><input type="checkbox" id="b_fit" checked /> FPI Fit Analysis</label>
+            <label class="chip-check"><input type="checkbox" id="b_hook" checked /> Hook Messaging</label>
+            <label class="chip-check"><input type="checkbox" id="b_email" checked /> Email Draft</label>
+            <label class="chip-check"><input type="checkbox" id="b_obj" /> Objections + Counters</label>
+          </div>
+        </div>
+
+      </div>
+      <button class="run-btn" id="briefRunBtn" onclick="runBrief()">⚡ Generate Prospect Brief</button>
+      <div class="loading-bar" id="briefLoadingBar"><div class="loading-bar-fill"></div></div>
+      <div class="error-msg" id="briefError"></div>
+    </div>
+
+    <!-- Brief Results -->
+    <div class="results-panel" id="briefResults">
+      <div class="section-label">Prospect Brief</div>
+      <div class="brief-header" id="briefHeader"></div>
+      <div id="tierBanner"></div>
+      <div id="briefCards"></div>
+      <button class="save-btn" onclick="saveBrief()">+ Save to Leads</button>
+    </div>
+  </div>
+
+  <!-- SAVED LEADS -->
+  <div class="saved-section" id="savedSection">
+    <div class="divider"></div>
+    <div class="section-label">Saved</div>
+    <div class="saved-list" id="savedList"></div>
+  </div>
+
+</div>
+
+<script>
+// ─────────────────── SYSTEM PROMPT ───────────────────
+const FPI_SYSTEM = `You are a sales intelligence analyst embedded at FPI Security Services. Your job is to generate sharp, specific, actionable sales intelligence.
+
+ABOUT FPI:
+- Founded 1981 by a U.S. Army veteran. Family-owned, currently led by CEO Alexander Perez.
+- ~450 licensed officers. Headquarters: Pembroke Pines, FL. Active markets: Miami-Dade, Broward, Orlando, and DFW/Texas.
+- Revenue: just under $20M.
+
+FPI SERVICE TIERS — know exactly when to recommend each:
+
+TIER 1 — GUARD / PATROL:
+Best for: government buildings, schools, healthcare, large HOAs, municipalities, properties needing visible human presence, compliance-driven contracts.
+Strengths: ambassador-style community engagement, law enforcement background officers, Lighthouse incident reporting, Samsara GPS fleet tracking.
+
+TIER 2 — ROSA AI AUTONOMOUS UNIT:
+Best for: outdoor perimeters with after-hours theft risk. Storage lots, auto dealerships, marinas, parking lots, construction sites, warehouses.
+How it works: Pole-mounted autonomous unit (requires AC power), 180° AI cameras, detects people/vehicles with 99%+ accuracy, auto-triggers strobes and voice warnings, FPI SOC monitors overnight via two-way audio.
+Key pitch: replaces or supplements overnight guards at a fraction of the cost. No internet needed, cellular-connected, deploys in 15 minutes.
+
+TIER 3 — RIO SOLAR-POWERED TRAILER:
+Best for: outdoor perimeters with no available power source. Remote lots, construction sites, temporary deployments, open fields, anywhere running conduit is impractical.
+How it works: Same AI capabilities as ROSA (180° cameras, human/vehicle detection, auto-deterrence, SOC monitoring), but mounted on a towable solar-powered trailer. Completely self-contained. No power or internet infrastructure required. Can be relocated as needed.
+Key pitch: the ROSA pitch plus full site flexibility. No electrician, no conduit, no permits. Drop it, activate it, move it when the job is done.
+
+TIER 4 — AVA AUTONOMOUS GATE ATTENDANT:
+Best for: gated HOAs, apartment complexes, office parks — any property with a staffed or unstaffed entry gate.
+How it works: AI kiosk handles visitor verification (QR, PIN, license plate recognition), resident pre-approvals via HOAP app, two-way audio/video to FPI SOC.
+Key pitch: replaces or supplements gatehouse guards. Hybrid model = physical guard days + AVA/virtual guard nights = significant cost savings.
+
+TIER 5 — HYBRID MODEL:
+Combine 2+ tiers. Most common: physical guard days + virtual/SOC nights. Or ROSA/RIO perimeter + guard at entry point. Or AVA gate + ROSA lot coverage.
+
+TIER 6 — SERVICE & MAINTENANCE AGREEMENTS:
+Best for: properties and businesses that already have existing surveillance camera systems or access control infrastructure but lack professional oversight, maintenance, or monitoring.
+How it works: FPI provides ongoing service contracts covering system health checks, camera/equipment maintenance, software updates, remote diagnostics, and optional SOC monitoring integration.
+Target profile: businesses with aging or neglected camera systems, new property managers inheriting old infrastructure, commercial properties after a renovation, or any client who owns hardware but has no support contract.
+Key pitch: FPI keeps their existing investment working. Most camera systems go unmonitored or unmaintained — we change that without requiring new hardware.
+
+TONE RULES:
+- Write like a sharp operator, not a marketing bot.
+- Specific and concrete. No filler.
+- Do NOT use em dashes. Use commas, periods, or colons instead.
+- No corporate jargon. Sound like a person.
+- Do NOT include pricing or dollar amounts in any output.
+- Emails: short paragraphs, direct, no "hope this finds you well."`;
+
+// ─────────────────── STATE ───────────────────
+let selectedTier = 'all';
+let savedItems = JSON.parse(localStorage.getItem('fpi_saved_v2') || '[]');
+let currentBriefData = null;
+let currentDiscoverData = null;
+
+renderSaved();
+selectTier(document.querySelector('[data-tier="all"]'), 'all');
+
+// ─────────────────── MODE SWITCH ───────────────────
+function switchMode(mode) {
+  document.getElementById('discoverMode').style.display = mode === 'discover' ? 'block' : 'none';
+  document.getElementById('briefMode').style.display    = mode === 'brief' ? 'block' : 'none';
+  document.getElementById('discoverBtn').className = 'mode-btn' + (mode === 'discover' ? ' active' : '');
+  document.getElementById('briefBtn').className    = 'mode-btn' + (mode === 'brief' ? ' active' : '');
+}
+
+// ─────────────────── TIER CHIP SELECT ───────────────────
+function selectTier(el, tier) {
+  selectedTier = tier;
+  document.querySelectorAll('.tier-chip').forEach(c => {
+    c.className = 'tier-chip';
+  });
+  const map = {all:'sel-all', guard:'sel-guard', rosa:'sel-rosa', rio:'sel-rio', ava:'sel-ava', hybrid:'sel-hybrid', svc:'sel-svc'};
+  if (el) el.classList.add(map[tier] || '');
+}
+
+// ─────────────────── DISCOVER ───────────────────
+async function runDiscover() {
+  const market   = document.getElementById('d_market').value;
+  const vertical = document.getElementById('d_vertical').value;
+  const tier     = selectedTier;
+  const inclWhy  = document.getElementById('d_why').checked;
+  const inclSol  = document.getElementById('d_solution').checked;
+  const inclHook = document.getElementById('d_hook').checked;
+  const inclWhere= document.getElementById('d_where').checked;
+
+  clearError('discoverError');
+  setLoading('discover', true);
+
+  const tierText = tier === 'all' ? 'all tiers (Guard/Patrol, ROSA AI, RIO Solar Trailer, AVA Gate, Hybrid, Service & Maintenance)'
+    : tier === 'guard' ? 'Guard/Patrol services only'
+    : tier === 'rosa' ? 'ROSA AI autonomous perimeter units only'
+    : tier === 'rio' ? 'RIO solar-powered trailer units only'
+    : tier === 'ava' ? 'AVA autonomous gate attendant / virtual guarding only'
+    : tier === 'svc' ? 'Service & Maintenance agreements for existing surveillance systems only'
+    : 'Hybrid models (mixed service tiers)';
+
+  const sections = [];
+  if (inclWhy)  sections.push('WHY_NOW: 2-3 sentences on why this prospect type is ripe right now. Reference market conditions, pain points, or timing factors.');
+  if (inclSol)  sections.push('SOLUTION: Which specific FPI tier(s) to pitch and why it fits this prospect type. Be specific. Do not include pricing.');
+  if (inclHook) sections.push('HOOK: 2-sentence opener for a cold call or first email. Sound like you know their world.');
+  if (inclWhere)sections.push('WHERE_TO_FIND: 2-3 specific tactics or sources to find and identify these prospects (LinkedIn filters, associations, databases, physical prospecting, etc.).');
+
+  const prompt = `Generate a targeted prospect list for FPI Security Services to pursue in ${market}.
+Service tier focus: ${tierText}.
+${vertical ? `Priority vertical: ${vertical}.` : 'Cover multiple relevant verticals.'}
+
+Generate exactly 6 distinct prospect CATEGORIES (not individual companies). Each category should represent a specific type of business or property that FPI should actively target.
+
+For each prospect category, use this exact format:
+
+PROSPECT: [Category Name — be specific, e.g. "Independent RV & Boat Storage Lots" not just "Storage"]
+TIER: [guard | rosa | rio | ava | hybrid | svc]
+VERTICAL: [short vertical label]
+${sections.join('\n')}
+---
+
+Output all 6 categories separated by ---. No intro text, no outro text.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': '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',
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: FPI_SYSTEM,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || 'API error');
+    const text = data.content.find(b => b.type === 'text')?.text || '';
+    currentDiscoverData = { market, vertical, tier, text, ts: Date.now() };
+    renderDiscover(text, inclWhy, inclSol, inclHook, inclWhere);
+  } catch(e) {
+    showError('discoverError', 'Error: ' + e.message);
+  } finally {
+    setLoading('discover', false);
+  }
+}
+
+function renderDiscover(text, inclWhy, inclSol, inclHook, inclWhere) {
+  const blocks = text.split('---').map(b => b.trim()).filter(Boolean);
+  const grid = document.getElementById('targetGrid');
+  grid.innerHTML = '';
+
+  blocks.forEach(block => {
+    const nameMatch  = block.match(/PROSPECT:\s*(.+)/);
+    const tierMatch  = block.match(/TIER:\s*(\w+)/);
+    const vertMatch  = block.match(/VERTICAL:\s*(.+)/);
+    const whyMatch   = block.match(/WHY_NOW:\s*([\s\S]+?)(?=\n[A-Z_]+:|$)/);
+    const solMatch   = block.match(/SOLUTION:\s*([\s\S]+?)(?=\n[A-Z_]+:|$)/);
+    const hookMatch  = block.match(/HOOK:\s*([\s\S]+?)(?=\n[A-Z_]+:|$)/);
+    const whereMatch = block.match(/WHERE_TO_FIND:\s*([\s\S]+?)(?=\n[A-Z_]+:|$)/);
+
+    if (!nameMatch) return;
+    const name  = nameMatch[1].trim();
+    const tier  = (tierMatch?.[1] || 'guard').toLowerCase().trim();
+    const vert  = vertMatch?.[1]?.trim() || '';
+    const why   = whyMatch?.[1]?.trim() || '';
+    const sol   = solMatch?.[1]?.trim() || '';
+    const hook  = hookMatch?.[1]?.trim() || '';
+    const where = whereMatch?.[1]?.trim() || '';
+
+    const tierLabel = {guard:'Guard/Patrol', rosa:'ROSA AI Unit', rio:'RIO Solar Trailer', ava:'AVA Gate', hybrid:'Hybrid Model', svc:'Service & Maintenance'}[tier] || tier;
+
+    let bodyHTML = '';
+    if (inclWhy && why)   bodyHTML += `<div class="tc-section"><div class="tc-label">Why Now</div>${escHtml(why)}</div>`;
+    if (inclSol && sol)   bodyHTML += `<div class="tc-section"><div class="tc-label">FPI Solution</div>${escHtml(sol)}</div>`;
+    if (inclHook && hook) bodyHTML += `<div class="tc-section"><div class="tc-label">Opening Hook</div><em>${escHtml(hook)}</em></div>`;
+    if (inclWhere && where) bodyHTML += `<div class="tc-section"><div class="tc-label">Where to Find Them</div>${escHtml(where)}</div>`;
+
+    const card = document.createElement('div');
+    card.className = 'target-card';
+    card.innerHTML = `
+      <div class="tc-header">
+        <div class="tc-name">${escHtml(name)}</div>
+        <div class="tc-badges">
+          <span class="tc-tier ${tier}">${tierLabel}</span>
+          ${vert ? `<span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">${escHtml(vert)}</span>` : ''}
+        </div>
+      </div>
+      <div class="tc-body">${bodyHTML}</div>
+      <div style="padding:0 18px 14px">
+        <button class="tc-drill-btn" onclick="drillDown('${escAttr(name)}','${escAttr(tier)}','${escAttr(vert)}')">
+          → Generate Full Brief for This Target Type
+        </button>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  document.getElementById('discoverResults').classList.add('visible');
+}
+
+function drillDown(name, tier, vert) {
+  switchMode('brief');
+  document.getElementById('b_company').value = name;
+  const vertMap = {
+    'guard': 'Commercial Property / Office Park',
+    'rosa': 'Storage Facility / Warehouse',
+    'ava': 'HOA / Residential Community',
+    'hybrid': 'HOA / Residential Community'
+  };
+  const vSelect = document.getElementById('b_vertical');
+  const targetVert = vert.toLowerCase();
+  for (let opt of vSelect.options) {
+    if (opt.text.toLowerCase().includes(targetVert.split(' ')[0])) {
+      vSelect.value = opt.value;
+      break;
+    }
+  }
+  document.getElementById('b_context').value = `Tier focus: ${tier}. Pre-populated from Discover mode.`;
+  document.getElementById('briefMode').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ─────────────────── BRIEF ───────────────────
+async function runBrief() {
+  const company  = document.getElementById('b_company').value.trim();
+  const vertical = document.getElementById('b_vertical').value;
+  const location = document.getElementById('b_location').value.trim();
+  const contact  = document.getElementById('b_contact').value.trim();
+  const context  = document.getElementById('b_context').value.trim();
+  const inclWhy  = document.getElementById('b_why').checked;
+  const inclTier = document.getElementById('b_tier').checked;
+  const inclFit  = document.getElementById('b_fit').checked;
+  const inclHook = document.getElementById('b_hook').checked;
+  const inclEmail= document.getElementById('b_email').checked;
+  const inclObj  = document.getElementById('b_obj').checked;
+
+  if (!company)  { showError('briefError', 'Please enter a company or property name.'); return; }
+  if (!vertical) { showError('briefError', 'Please select an industry vertical.'); return; }
+  clearError('briefError');
+  setLoading('brief', true);
+
+  const sections = [];
+  if (inclTier)  sections.push(`RECOMMENDED_TIER: State which FPI service tier is the best fit (Guard/Patrol, ROSA AI Units, AVA Gate Attendant, or Hybrid). Explain in 2-3 sentences why this tier fits, including rough monthly value estimate.`);
+  if (inclWhy)   sections.push(`WHY_TARGET: 3-4 sentences on why this specific prospect is worth pursuing right now.`);
+  if (inclFit)   sections.push(`FPI_FIT: 3-5 bullets mapping specific FPI capabilities to this prospect's needs. Start each bullet with the capability name.`);
+  if (inclHook)  sections.push(`HOOK: 2-3 sentence cold call/meeting opener that sounds human and shows knowledge of their situation.`);
+  if (inclEmail) sections.push(`EMAIL_SUBJECT: concise subject line.\nEMAIL_BODY: 4-6 sentence cold email. Personalized, direct, one pain point, one FPI capability, soft CTA. No "hope this email finds you well."`);
+  if (inclObj)   sections.push(`OBJECTIONS: 3 likely objections with counters. Format: OBJECTION: [text] / COUNTER: [text]`);
+
+  const prompt = `Generate a prospect brief for:
+
+Company: ${company}
+Vertical: ${vertical}
+Location: ${location || 'South Florida (assume Broward/Miami-Dade area)'}
+${contact ? `Key Contact: ${contact}` : ''}
+${context ? `Context: ${context}` : ''}
+
+Output these sections in order. Use exact section headers. No extra text before or after.
+
+${sections.join('\n\n')}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': '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',
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: FPI_SYSTEM,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || 'API error');
+    const text = data.content.find(b => b.type === 'text')?.text || '';
+    currentBriefData = { company, vertical, location, contact, context, text, mode: 'brief', ts: Date.now() };
+    renderBrief(currentBriefData, inclTier, inclWhy, inclFit, inclHook, inclEmail, inclObj);
+  } catch(e) {
+    showError('briefError', 'Error: ' + e.message);
+  } finally {
+    setLoading('brief', false);
+  }
+}
+
+function renderBrief(d, inclTier, inclWhy, inclFit, inclHook, inclEmail, inclObj) {
+  // Header
+  document.getElementById('briefHeader').innerHTML = `
+    <div><div class="brief-name">${escHtml(d.company)}</div></div>
+    <div class="brief-tags">
+      <span class="tag accent">${escHtml(d.vertical)}</span>
+      ${d.location ? `<span class="tag">${escHtml(d.location)}</span>` : ''}
+      ${d.contact  ? `<span class="tag">${escHtml(d.contact)}</span>` : ''}
+    </div>
+  `;
+
+  // Tier banner
+  const tierBannerEl = document.getElementById('tierBanner');
+  tierBannerEl.innerHTML = '';
+  if (inclTier) {
+    const tierMatch = d.text.match(/RECOMMENDED_TIER:\s*([\s\S]+?)(?=\n[A-Z_]+:|$)/);
+    if (tierMatch) {
+      const tierText = tierMatch[1].trim();
+      let tierClass = 'guard';
+      if (/rosa|autonomous.*perimeter|ai unit/i.test(tierText)) tierClass = 'rosa';
+      else if (/ava|gate attendant|virtual guard/i.test(tierText)) tierClass = 'ava';
+      else if (/hybrid/i.test(tierText)) tierClass = 'hybrid';
+      const tierNames = {guard:'Guard / Patrol Services', rosa:'ROSA AI Autonomous Units', ava:'AVA Gate Attendant + Virtual Guard', hybrid:'Hybrid Model'};
+      tierBannerEl.innerHTML = `
+        <div class="tier-banner ${tierClass}">
+          <div>
+            <div class="tier-banner-label">Recommended Solution</div>
+            <div class="tier-banner-name">${tierNames[tierClass]}</div>
+          </div>
+          <div class="tier-banner-reason">${escHtml(tierText)}</div>
+        </div>
+      `;
+    }
+  }
+
+  // Cards
+  const container = document.getElementById('briefCards');
+  container.innerHTML = '';
+
+  const cardDefs = [
+    { key: 'WHY_TARGET', enabled: inclWhy,  icon: '🎯', title: 'Why Target This Prospect' },
+    { key: 'FPI_FIT',    enabled: inclFit,  icon: '🔗', title: 'FPI Fit Analysis' },
+    { key: 'HOOK',       enabled: inclHook, icon: '📡', title: 'Hook Messaging / Opener' },
+    { key: 'EMAIL',      enabled: inclEmail,icon: '✉️', title: 'Email Draft', isEmail: true },
+    { key: 'OBJECTIONS', enabled: inclObj,  icon: '🛡', title: 'Objections + Counters' },
+  ];
+
+  cardDefs.forEach(def => {
+    if (!def.enabled) return;
+    let content = '';
+    if (def.isEmail) {
+      const subj = d.text.match(/EMAIL_SUBJECT:\s*(.+?)(?=\n|$)/);
+      const body = d.text.match(/EMAIL_BODY:\s*([\s\S]+?)(?=\n[A-Z_]+:|$)/);
+      content = (subj ? `Subject: ${subj[1].trim()}\n\n` : '') + (body ? body[1].trim() : '');
+    } else {
+      const m = d.text.match(new RegExp(`${def.key}:\\s*([\\s\\S]+?)(?=\\n[A-Z_]+:|$)`));
+      content = m ? m[1].trim() : '';
+    }
+    if (!content) return;
+    const card = document.createElement('div');
+    card.className = 'result-card';
+    card.innerHTML = `
+      <div class="card-header">
+        <div class="card-icon">${def.icon}</div>
+        <div class="card-title">${def.title}</div>
+        <button class="copy-btn" onclick="copyText(this,'${escAttr(content)}')">Copy</button>
+      </div>
+      <div class="card-body">${escHtml(content)}</div>
+    `;
+    container.appendChild(card);
+  });
+
+  document.getElementById('briefResults').classList.add('visible');
+  document.getElementById('briefResults').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ─────────────────── SAVE / LOAD ───────────────────
+function saveDiscover() {
+  if (!currentDiscoverData) return;
+  savedItems.unshift({ ...currentDiscoverData, label: `Discover: ${currentDiscoverData.market.split(' ')[0]} / ${currentDiscoverData.tier}`, mode: 'discover' });
+  if (savedItems.length > 20) savedItems.pop();
+  localStorage.setItem('fpi_saved_v2', JSON.stringify(savedItems));
+  renderSaved();
+}
+
+function saveBrief() {
+  if (!currentBriefData) return;
+  savedItems.unshift({ ...currentBriefData, label: currentBriefData.company });
+  if (savedItems.length > 20) savedItems.pop();
+  localStorage.setItem('fpi_saved_v2', JSON.stringify(savedItems));
+  renderSaved();
+}
+
+function renderSaved() {
+  const list = document.getElementById('savedList');
+  if (!savedItems.length) {
+    list.innerHTML = '<div class="empty-state">No saved items yet.</div>';
+    return;
+  }
+  list.innerHTML = savedItems.map((item, i) => `
+    <div class="saved-chip" onclick="loadSaved(${i})">
+      <div>
+        <div class="saved-chip-name">${escHtml(item.label || item.company || 'Saved')}</div>
+        <div class="saved-chip-sub">${item.mode === 'discover' ? 'DISCOVERY' : (item.vertical || '')}</div>
+      </div>
+      <button class="saved-chip-del" onclick="event.stopPropagation();deleteSaved(${i})">×</button>
+    </div>
+  `).join('');
+}
+
+function loadSaved(i) {
+  const item = savedItems[i];
+  if (item.mode === 'discover') {
+    switchMode('discover');
+    if (item.text) renderDiscover(item.text, true, true, true, true, true);
+  } else {
+    switchMode('brief');
+    document.getElementById('b_company').value  = item.company || '';
+    document.getElementById('b_vertical').value = item.vertical || '';
+    document.getElementById('b_location').value = item.location || '';
+    document.getElementById('b_contact').value  = item.contact || '';
+    document.getElementById('b_context').value  = item.context || '';
+    currentBriefData = item;
+    if (item.text) renderBrief(item, true, true, true, true, true, false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
+function deleteSaved(i) {
+  savedItems.splice(i, 1);
+  localStorage.setItem('fpi_saved_v2', JSON.stringify(savedItems));
+  renderSaved();
+}
+
+// ─────────────────── UTILS ───────────────────
+function setLoading(mode, on) {
+  const btn = document.getElementById(mode + 'RunBtn');
+  const bar = document.getElementById(mode + 'LoadingBar');
+  btn.disabled = on;
+  btn.textContent = on ? 'Generating...' : (mode === 'discover' ? '🔍 Generate Target List' : '⚡ Generate Prospect Brief');
+  bar.className = on ? 'loading-bar active' : 'loading-bar';
+}
+function showError(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.classList.add('visible'); }
+function clearError(id) { document.getElementById(id).classList.remove('visible'); }
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escAttr(s) { return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/\n/g,' '); }
+function copyText(btn, text) {
+  navigator.clipboard.writeText(text.replace(/&#39;/g,"'").replace(/&quot;/g,'"')).then(() => {
+    btn.textContent = 'Copied!'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1800);
+  });
+}
+</script>
+</body>
+</html>
