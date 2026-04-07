@@ -84,16 +84,20 @@ export default async function handler(req) {
     // We use parameterized queries for safety
     let logs;
 
+    // Use created_at (TIMESTAMPTZ) for reliable date range filtering
+    const fromTs = from ? from + 'T00:00:00Z' : '2000-01-01T00:00:00Z';
+    const toTs   = to   ? to   + 'T23:59:59Z' : '2099-12-31T23:59:59Z';
+
     if (siteId && type) {
       logs = await sql`
         SELECT date, time_in, full_name, visitor_type, company_unit,
                id_verified, site_id, timestamp_iso
         FROM logs
-        WHERE date >= ${from || '2000-01-01'}
-          AND date <= ${to || '2099-12-31'}
+        WHERE created_at >= ${fromTs}::timestamptz
+          AND created_at <= ${toTs}::timestamptz
           AND site_id = ${siteId}
           AND visitor_type = ${type}
-        ORDER BY timestamp_iso DESC
+        ORDER BY created_at DESC
         LIMIT 5000
       `;
     } else if (siteId) {
@@ -101,10 +105,10 @@ export default async function handler(req) {
         SELECT date, time_in, full_name, visitor_type, company_unit,
                id_verified, site_id, timestamp_iso
         FROM logs
-        WHERE date >= ${from || '2000-01-01'}
-          AND date <= ${to || '2099-12-31'}
+        WHERE created_at >= ${fromTs}::timestamptz
+          AND created_at <= ${toTs}::timestamptz
           AND site_id = ${siteId}
-        ORDER BY timestamp_iso DESC
+        ORDER BY created_at DESC
         LIMIT 5000
       `;
     } else if (type) {
@@ -112,10 +116,10 @@ export default async function handler(req) {
         SELECT date, time_in, full_name, visitor_type, company_unit,
                id_verified, site_id, timestamp_iso
         FROM logs
-        WHERE date >= ${from || '2000-01-01'}
-          AND date <= ${to || '2099-12-31'}
+        WHERE created_at >= ${fromTs}::timestamptz
+          AND created_at <= ${toTs}::timestamptz
           AND visitor_type = ${type}
-        ORDER BY timestamp_iso DESC
+        ORDER BY created_at DESC
         LIMIT 5000
       `;
     } else {
@@ -123,9 +127,9 @@ export default async function handler(req) {
         SELECT date, time_in, full_name, visitor_type, company_unit,
                id_verified, site_id, timestamp_iso
         FROM logs
-        WHERE date >= ${from || '2000-01-01'}
-          AND date <= ${to || '2099-12-31'}
-        ORDER BY timestamp_iso DESC
+        WHERE created_at >= ${fromTs}::timestamptz
+          AND created_at <= ${toTs}::timestamptz
+        ORDER BY created_at DESC
         LIMIT 5000
       `;
     }
@@ -140,12 +144,15 @@ export default async function handler(req) {
     if (!authed) return respond({ error: 'Unauthorized' }, 401);
 
     const targetDate = date || new Date().toLocaleDateString('en-US');
+    const summaryFrom = targetDate + 'T00:00:00Z';
+    const summaryTo   = targetDate + 'T23:59:59Z';
     const { rows } = await sql`
       SELECT date, time_in, full_name, visitor_type, company_unit,
              id_verified, site_id
       FROM logs
-      WHERE date = ${targetDate}
-      ORDER BY timestamp_iso ASC
+      WHERE created_at >= ${summaryFrom}::timestamptz
+        AND created_at <= ${summaryTo}::timestamptz
+      ORDER BY created_at ASC
     `;
     return respond({ logs: rows, date: targetDate, total: rows.length });
   }
