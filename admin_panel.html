@@ -627,16 +627,14 @@ document.getElementById('setup-btn').addEventListener('click', async () => {
 
   try {
     apiUrl = url;
-    const data = await api('load_all');
+    const data = await api('ping');
+    if (!data.ok) throw new Error('API responded but database is not reachable.');
     lsSet('fpi_api_url', url);
-    sites = data.sites || [];
-    guards = data.guards || [];
-    settings = data.settings || {};
     showScreen('login');
-    document.getElementById('webhook-display').textContent = url;
-    toast('Connected to Google Sheets!','success');
+    document.getElementById('webhook-display').textContent = url + '/api/*';
+    toast('Connected to Vercel!','success');
   } catch(e) {
-    errEl.textContent = 'Could not connect. Check the URL and make sure the n8n workflow is active.';
+    errEl.textContent = 'Could not connect. Check that your Vercel URL is correct and the project is deployed.';
     errEl.style.display = 'block';
     apiUrl = '';
   } finally {
