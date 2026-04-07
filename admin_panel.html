@@ -594,7 +594,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font-body);
 function lsGet(k,d){ try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;} }
 function lsSet(k,v){ try{localStorage.setItem(k,JSON.stringify(v));}catch(e){} }
 
-let apiUrl = lsGet('fpi_api_url','');
+let apiUrl = 'https://fpi-visitor-log.vercel.app';  // hardcoded — no setup needed
 let currentUser = null;
 let currentRole = '';
 let sessionPassword = '';
@@ -616,8 +616,9 @@ function showScreen(name) {
 }
 
 function init() {
-  if (!apiUrl) { showScreen('setup'); }
-  else { showScreen('login'); document.getElementById('webhook-display').textContent = apiUrl; }
+  // URL is hardcoded — always go straight to login
+  showScreen('login');
+  document.getElementById('webhook-display').textContent = apiUrl + '/api/*';
 }
 init();
 
