@@ -13,15 +13,14 @@ function respond(data, status = 200) {
   });
 }
 
-async function verifyAuth(username, password) {
-  const { rows } = await sql`
-    SELECT key, value FROM settings WHERE key IN ('adminUsername','adminPassword')
-  `;
-  const map = {};
-  rows.forEach(r => (map[r.key] = r.value));
-  const storedUser = map.adminUsername || 'admin';
-  const storedPass = map.adminPassword || 'fpi2024';
-  return username === storedUser && password === storedPass;
+async function verifyUser(username, password) {
+  try {
+    const { rows } = await sql`
+      SELECT role, restricted_site FROM users
+      WHERE username = ${username} AND password = ${password}
+    `;
+    return rows.length ? rows[0] : null;
+  } catch { return null; }
 }
 
 export default async function handler(req) {
@@ -75,10 +74,12 @@ export default async function handler(req) {
   // ── GET LOGS (reports — auth required) ────────────────────────────
   if (action === 'get_logs') {
     const { username = 'admin', password = '' } = body;
-    const authed = await verifyAuth(username, password);
-    if (!authed) return respond({ error: 'Unauthorized' }, 401);
+    const authUser = await verifyUser(username, password);
+    if (!authUser) return respond({ error: 'Unauthorized' }, 401);
 
-    const { from, to, siteId, type } = body;
+    const { from, to, type } = body;
+    // Server-side enforcement: viewer with restricted_site overrides any siteId sent by client
+    const siteId = authUser.restricted_site || body.siteId || null;
 
     // Build dynamic query with optional filters
     // We use parameterized queries for safety
@@ -140,8 +141,8 @@ export default async function handler(req) {
   // ── DAILY SUMMARY (for scheduled email reports) ───────────────────
   if (action === 'daily_summary') {
     const { username = 'admin', password = '', date } = body;
-    const authed = await verifyAuth(username, password);
-    if (!authed) return respond({ error: 'Unauthorized' }, 401);
+    const authUser = await verifyUser(username, password);
+    if (!authUser) return respond({ error: 'Unauthorized' }, 401);
 
     const targetDate = date || new Date().toLocaleDateString('en-US');
     const summaryFrom = targetDate + 'T00:00:00Z';
