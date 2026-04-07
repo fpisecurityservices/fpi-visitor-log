@@ -565,6 +565,8 @@
         }
         // Update header with site name
         document.querySelector('header h1').textContent = siteConfig.siteName || 'Visitor Log';
+        // Always hide setup warning when using a site link
+        document.getElementById('webhook-warning').classList.remove('show');
         applyWebhookState();
       } else {
         document.getElementById('pin-error').textContent = 'Incorrect PIN. Try again.';
@@ -636,6 +638,12 @@
     } else {
       warning.classList.add('show');
     }
+  }
+  // If opened via a site link, always hide the manual setup warning
+  // The apiUrl comes from the embedded config, not localStorage
+  if (siteConfig) {
+    document.getElementById('webhook-warning').classList.remove('show');
+    document.getElementById('settings-btn').style.display = 'none'; // hide gear icon
   }
   applyWebhookState();
   document.getElementById('settings-btn').addEventListener('click', () => {
