@@ -311,6 +311,45 @@ body { background: var(--bg); color: var(--text); font-family: var(--font-body);
 .pager button:hover { border-color: var(--amber); }
 .pager button:disabled { opacity: 0.3; pointer-events: none; }
 
+
+/* ── ROLE BADGES ── */
+.role-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.5px; padding: 3px 10px; border-radius: 20px;
+}
+.role-super_admin { background: rgba(245,166,35,0.15); color: #f5a623; border: 1px solid rgba(245,166,35,0.3); }
+.role-admin       { background: rgba(42,109,217,0.15); color: #5b9cf6; border: 1px solid rgba(42,109,217,0.3); }
+.role-manager     { background: rgba(61,220,132,0.15); color: #3ddc84; border: 1px solid rgba(61,220,132,0.3); }
+.role-viewer      { background: rgba(167,139,250,0.15);color: #a78bfa; border: 1px solid rgba(167,139,250,0.3); }
+
+/* ── USERS TAB ── */
+#users-grid { display: flex; flex-direction: column; gap: 10px; }
+.user-row {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+}
+.user-info { display: flex; align-items: center; gap: 14px; }
+.user-avatar {
+  width: 42px; height: 42px; border-radius: 50%;
+  background: var(--surface3); border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 18px; font-weight: 800;
+  color: var(--amber); flex-shrink: 0;
+}
+.user-name { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
+.user-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.user-username { font-size: 12px; color: var(--muted); font-family: monospace; }
+.user-last-login { font-size: 11px; color: var(--muted); }
+.user-actions { display: flex; gap: 8px; }
+.you-badge {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  background: rgba(245,166,35,0.1); color: var(--amber);
+  padding: 2px 7px; border-radius: 20px; letter-spacing: 0.5px;
+}
+
 /* ── SYNC STATUS ── */
 .sync-chip {
   display: inline-flex; align-items: center; gap: 6px;
@@ -399,6 +438,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font-body);
     <button class="tab-btn" data-tab="guards">&#128100; Guards</button>
     <button class="tab-btn" data-tab="settings">&#9881; Settings</button>
     <button class="tab-btn" data-tab="reports">&#128202; Reports</button>
+    <button class="tab-btn" data-tab="users" id="tab-btn-users" style="display:none">&#128101; Users</button>
   </div>
   <div id="main-content">
 
@@ -532,6 +572,15 @@ body { background: var(--bg); color: var(--text); font-family: var(--font-body);
       </div>
 
     </div>
+
+    <!-- USERS (super_admin only) -->
+    <div class="tab-panel" id="tab-users">
+      <div class="panel-header">
+        <div><h2>Users</h2><p>Manage admin access and roles</p></div>
+        <button class="btn-add" id="add-user-btn">+ Add User</button>
+      </div>
+      <div id="users-grid"></div>
+    </div>
   </div>
 </div>
 
@@ -545,9 +594,11 @@ body { background: var(--bg); color: var(--text); font-family: var(--font-body);
 function lsGet(k,d){ try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;} }
 function lsSet(k,v){ try{localStorage.setItem(k,JSON.stringify(v));}catch(e){} }
 
-let apiUrl = lsGet('fpi_api_url','');   // e.g. https://fpi-visitor-log.vercel.app
+let apiUrl = lsGet('fpi_api_url','');
 let currentUser = null;
-let sessionPassword = '';  // held in memory only for the session
+let currentRole = '';
+let sessionPassword = '';
+let currentRestrictedSite = null;
 
 // In-memory state (sourced from Vercel Postgres)
 let sites = [];
@@ -686,14 +737,17 @@ async function doLogin() {
       return;
     }
 
-    // Success — store session credentials and load data
+    // Success — store session credentials and configure UI by role
     currentUser = u;
     sessionPassword = p;
+    currentRole = data.user?.role || 'viewer';
+    currentRestrictedSite = data.user?.restricted_site || null;
     sites    = data.sites    || [];
     guards   = data.guards   || [];
     settings = data.settings || {};
 
-    document.getElementById('nav-username').textContent = u;
+    document.getElementById('nav-username').textContent = data.user?.full_name || u;
+    applyRoleUI();
     showScreen('app');
     renderAll();
 
@@ -709,6 +763,8 @@ async function doLogin() {
 document.getElementById('logout-btn').addEventListener('click', () => {
   currentUser = null;
   sessionPassword = '';
+  currentRole = '';
+  currentRestrictedSite = null;
   document.getElementById('login-pass').value = '';
   document.getElementById('login-error').style.display = 'none';
   showScreen('login');
@@ -733,6 +789,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.classList.add('active');
     document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
     if (btn.dataset.tab==='reports') initReports();
+    if (btn.dataset.tab==='users') loadAndRenderUsers();
   });
 });
 
@@ -983,14 +1040,14 @@ document.getElementById('change-pass-btn').addEventListener('click', async () =>
   const cur = document.getElementById('cur-pass').value;
   const nw = document.getElementById('new-pass').value;
   const cf = document.getElementById('conf-pass').value;
-  if (cur !== (settings.adminPassword||'fpi2024')) { toast('Current password is incorrect.','error'); return; }
+  if (cur !== sessionPassword) { toast('Current password is incorrect.','error'); return; }
   if (nw.length < 6) { toast('New password must be at least 6 characters.','error'); return; }
   if (nw !== cf) { toast('Passwords do not match.','error'); return; }
   const btn = document.getElementById('change-pass-btn');
   btn.disabled=true; setLoading(true);
   try {
-    await api('save_setting', { key: 'adminPassword', value: nw });
-    settings.adminPassword = nw;
+    await api('change_own_password', { newPassword: nw });
+    sessionPassword = nw;  // update session
     document.getElementById('cur-pass').value='';
     document.getElementById('new-pass').value='';
     document.getElementById('conf-pass').value='';
@@ -1022,6 +1079,38 @@ function initReports() {
   // Reports are always available with Vercel backend
   document.getElementById('rpt-no-webhook').classList.remove('show');
   document.getElementById('rpt-run-btn').disabled = false;
+
+  // If viewer with a restricted site, lock the site dropdown and show a notice
+  const siteSelect = document.getElementById('rpt-site');
+  const siteField  = siteSelect?.closest('.rpt-field');
+  if (currentRestrictedSite) {
+    // Lock site dropdown to restricted site
+    siteSelect.value = currentRestrictedSite;
+    siteSelect.disabled = true;
+    if (siteField) {
+      const siteName = sites.find(s=>s.id===currentRestrictedSite)?.name || currentRestrictedSite;
+      // Add a locked label if not already present
+      if (!document.getElementById('rpt-site-locked-label')) {
+        const lbl = document.createElement('div');
+        lbl.id = 'rpt-site-locked-label';
+        lbl.style.cssText = 'font-size:11px;color:var(--muted);margin-top:5px;';
+        lbl.textContent = '🔒 Restricted to: ' + siteName;
+        siteField.appendChild(lbl);
+      }
+    }
+    // Also populate the dropdown with at least this site so it shows correctly
+    if (!siteSelect.querySelector(`option[value="${currentRestrictedSite}"]`)) {
+      const opt = document.createElement('option');
+      opt.value = currentRestrictedSite;
+      opt.textContent = sites.find(s=>s.id===currentRestrictedSite)?.name || currentRestrictedSite;
+      siteSelect.appendChild(opt);
+    }
+    siteSelect.value = currentRestrictedSite;
+  } else {
+    siteSelect.disabled = false;
+    const locked = document.getElementById('rpt-site-locked-label');
+    if (locked) locked.remove();
+  }
 }
 
 document.getElementById('rpt-run-btn').addEventListener('click', runReport);
@@ -1247,6 +1336,222 @@ function buildTable(rows, noIdOnly) {
 }
 
 
+
+
+// ─────────────────────────────────────────────
+// ROLE-BASED UI
+// ─────────────────────────────────────────────
+const ADMIN_ROLES  = ['super_admin','admin'];
+const REPORT_ROLES = ['super_admin','admin','manager','viewer'];
+
+function applyRoleUI() {
+  const isAdmin = ADMIN_ROLES.includes(currentRole);
+  const isSuperAdmin = currentRole === 'super_admin';
+
+  // Show/hide tabs
+  ['sites','guards','settings'].forEach(tab => {
+    const btn = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
+    if (btn) btn.style.display = isAdmin ? '' : 'none';
+  });
+  const usersBtn = document.getElementById('tab-btn-users');
+  if (usersBtn) usersBtn.style.display = isSuperAdmin ? '' : 'none';
+
+  // If non-admin lands on a restricted tab, move them to reports
+  if (!isAdmin) {
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    const rBtn = document.querySelector('.tab-btn[data-tab="reports"]');
+    if (rBtn) rBtn.classList.add('active');
+    document.getElementById('tab-reports')?.classList.add('active');
+    initReports();
+  }
+}
+
+const ROLE_LABELS = {
+  super_admin: '★ Super Admin',
+  admin: '⚙ Admin',
+  manager: '📊 Manager',
+  viewer: '👁 Viewer'
+};
+
+// ─────────────────────────────────────────────
+// USERS TAB
+// ─────────────────────────────────────────────
+let allUsers = [];
+
+async function loadAndRenderUsers() {
+  setLoading(true);
+  try {
+    const data = await api('list_users');
+    allUsers = data.users || [];
+    renderUsers();
+  } catch(e) {
+    toast('Failed to load users.','error');
+  } finally { setLoading(false); }
+}
+
+function renderUsers() {
+  const grid = document.getElementById('users-grid');
+  if (!allUsers.length) {
+    grid.innerHTML = '<div class="no-items"><div class="ni-icon">&#128101;</div><h3>No users found</h3><p>Add your first user above.</p></div>';
+    return;
+  }
+  grid.innerHTML = allUsers.map(u => {
+    const isYou = u.username === currentUser;
+    const lastLogin = u.last_login ? new Date(u.last_login).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : 'Never';
+    return `<div class="user-row">
+      <div class="user-info">
+        <div class="user-avatar">${escHtml((u.full_name||u.username).charAt(0).toUpperCase())}</div>
+        <div>
+          <div class="user-name">${escHtml(u.full_name||u.username)} ${isYou?'<span class="you-badge">You</span>':''}</div>
+          <div class="user-meta">
+            <span class="role-badge role-${u.role}">${escHtml(ROLE_LABELS[u.role]||u.role)}</span>
+            <span class="user-username">@${escHtml(u.username)}</span>
+            <span class="user-last-login">Last login: ${lastLogin}</span>
+          </div>
+        </div>
+      </div>
+      <div class="user-actions">
+        <button class="btn-sm btn-edit" onclick="editUser('${escHtml(u.id)}')">&#9998; Edit</button>
+        ${!isYou ? `<button class="btn-sm btn-danger" onclick="confirmDeleteUser('${escHtml(u.id)}','${escHtml(u.full_name||u.username)}')">Remove</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('add-user-btn').addEventListener('click', () => {
+  const siteOpts = sites.map(s=>`<option value="${escHtml(s.id)}">${escHtml(s.name)}</option>`).join('');
+  showModal(`
+    <div class="modal-header"><h3>Add User</h3><button class="modal-close" onclick="closeModal()">&#10005;</button></div>
+    <div class="mf"><label>Full Name *</label><input id="m-ufname" placeholder="John Smith" autocapitalize="words"></div>
+    <div class="mf"><label>Username *</label><input id="m-uname" placeholder="jsmith" autocomplete="off" autocorrect="off" autocapitalize="none"></div>
+    <div class="mf"><label>Password *</label><input id="m-upass" type="password" placeholder="Min 6 characters"></div>
+    <div class="mf">
+      <label>Role *</label>
+      <select id="m-urole" onchange="toggleSiteRestriction(this.value)">
+        <option value="viewer">Viewer — Reports only, can restrict to 1 site (ideal for clients)</option>
+        <option value="manager">Manager — Reports only, all sites</option>
+        <option value="admin">Admin — Sites, guards, reports, settings</option>
+        <option value="super_admin">Super Admin — Full access including user management</option>
+      </select>
+      <p class="hint">Managers and Viewers can only see the Reports tab. Only Super Admins can manage users.</p>
+    </div>
+    <div class="mf" id="site-restriction-field">
+      <label>Restrict to Site <span style="color:var(--muted);font-weight:400;">(optional — leave blank for all sites)</span></label>
+      <select id="m-usite">
+        <option value="">No restriction — sees all sites</option>
+        ${siteOpts}
+      </select>
+      <p class="hint">If selected, this Viewer will only see data for that one site in Reports. Enforced server-side — cannot be bypassed.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save-modal" id="modal-submit-btn" onclick="createUser()">ADD USER</button>
+    </div>`);
+});
+
+function toggleSiteRestriction(role) {
+  const field = document.getElementById('site-restriction-field');
+  if (field) field.style.display = role === 'viewer' ? '' : 'none';
+}
+
+async function createUser() {
+  const fullName = document.getElementById('m-ufname').value.trim();
+  const username = document.getElementById('m-uname').value.trim().toLowerCase();
+  const password = document.getElementById('m-upass').value;
+  const role     = document.getElementById('m-urole').value;
+  if (!username||!password||!role) { toast('All fields are required.','error'); return; }
+  if (password.length < 6) { toast('Password must be at least 6 characters.','error'); return; }
+
+  const btn = document.getElementById('modal-submit-btn');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
+  setLoading(true);
+  try {
+    const restrictedSite = role === 'viewer'
+      ? (document.getElementById('m-usite')?.value || null)
+      : null;
+    await api('create_user', { newUser:{ username, password, role, fullName, restrictedSite } });
+    closeModal(); await loadAndRenderUsers();
+    toast('User created!','success');
+  } catch(e) { toast(e.message||'Failed to create user.','error'); }
+  finally { btn.disabled=false; btn.textContent='ADD USER'; setLoading(false); }
+}
+
+function editUser(id) {
+  const u = allUsers.find(x=>x.id===id); if(!u) return;
+  const isYou = u.username === currentUser;
+  const editSiteOpts = sites.map(s=>`<option value="${escHtml(s.id)}" ${s.id===(u.restricted_site||'')?'selected':''}>${escHtml(s.name)}</option>`).join('');
+  const showSiteRestriction = u.role === 'viewer';
+  showModal(`
+    <div class="modal-header"><h3>Edit User</h3><button class="modal-close" onclick="closeModal()">&#10005;</button></div>
+    <div class="mf"><label>Full Name</label><input id="m-ufname" value="${escHtml(u.full_name||'')}" autocapitalize="words"></div>
+    <div class="mf">
+      <label>Role</label>
+      <select id="m-urole" ${isYou?'disabled':''} onchange="toggleSiteRestriction(this.value)">
+        <option value="viewer"      ${u.role==='viewer'?'selected':''}>Viewer — Reports only, can restrict to 1 site</option>
+        <option value="manager"     ${u.role==='manager'?'selected':''}>Manager — Reports only (all sites)</option>
+        <option value="admin"       ${u.role==='admin'?'selected':''}>Admin — Sites, guards, reports, settings</option>
+        <option value="super_admin" ${u.role==='super_admin'?'selected':''}>Super Admin — Full access</option>
+      </select>
+      ${isYou?'<p class="hint">You cannot change your own role.</p>':''}
+    </div>
+    <div class="mf" id="site-restriction-field" style="${showSiteRestriction?'':'display:none'}">
+      <label>Restrict to Site <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
+      <select id="m-usite">
+        <option value="">No restriction — sees all sites</option>
+        ${editSiteOpts}
+      </select>
+      <p class="hint">Locks this Viewer to one site in Reports. Enforced server-side.</p>
+    </div>
+    <div class="mf"><label>Reset Password (leave blank to keep current)</label><input id="m-upass" type="password" placeholder="New password..."></div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save-modal" id="modal-submit-btn" onclick="saveUser('${escHtml(id)}')">SAVE CHANGES</button>
+    </div>`);
+}
+
+async function saveUser(id) {
+  const fullName = document.getElementById('m-ufname').value.trim();
+  const role     = document.getElementById('m-urole').value;
+  const password = document.getElementById('m-upass').value;
+  const restrictedSite = role === 'viewer'
+    ? (document.getElementById('m-usite')?.value || null)
+    : null;
+  const updates = { fullName, role, restrictedSite };
+  if (password) updates.password = password;
+
+  const btn = document.getElementById('modal-submit-btn');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
+  setLoading(true);
+  try {
+    await api('update_user', { userId:id, updates });
+    closeModal(); await loadAndRenderUsers();
+    toast('User updated.','success');
+  } catch(e) { toast(e.message||'Failed to update user.','error'); }
+  finally { btn.disabled=false; btn.textContent='SAVE CHANGES'; setLoading(false); }
+}
+
+function confirmDeleteUser(id, name) {
+  showModal(`
+    <div class="modal-header"><h3>Remove User</h3><button class="modal-close" onclick="closeModal()">&#10005;</button></div>
+    <p style="font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:24px;">Remove <strong style="color:var(--text)">${escHtml(name)}</strong>? They will immediately lose access to the admin panel.</p>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save-modal" style="background:var(--red)" id="modal-submit-btn" onclick="doDeleteUser('${escHtml(id)}')">REMOVE</button>
+    </div>`);
+}
+
+async function doDeleteUser(id) {
+  const btn = document.getElementById('modal-submit-btn');
+  btn.disabled=true; btn.innerHTML='<span class="spinner" style="border-top-color:#fff"></span>';
+  setLoading(true);
+  try {
+    await api('delete_user', { userId:id });
+    closeModal(); await loadAndRenderUsers();
+    toast('User removed.','info');
+  } catch(e) { toast(e.message||'Failed to remove user.','error'); }
+  finally { setLoading(false); }
+}
 
 // ─────────────────────────────────────────────
 // MODAL / TOAST
