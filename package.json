@@ -1,0 +1,8 @@
+{
+  "name": "fpi-visitor-log",
+  "version": "1.0.0",
+  "description": "FPI Security Services — Visitor Management System",
+  "dependencies": {
+    "@vercel/postgres": "^0.10.0"
+  }
+}
