@@ -63,6 +63,16 @@ export default async function handler(req) {
 
   const { action, username = 'admin', password = '' } = body;
 
+  // ── PING (no auth — confirms API + DB are reachable) ─────────────
+  if (action === 'ping') {
+    try {
+      await sql`SELECT 1`;
+      return respond({ ok: true, message: 'FPI Visitor Management API is live.' });
+    } catch (e) {
+      return respond({ error: 'Database not reachable: ' + e.message }, 503);
+    }
+  }
+
   // ── LOGIN ──────────────────────────────────────────────────────────
   if (action === 'login') {
     const ok = await verifyAuth(username, password);
